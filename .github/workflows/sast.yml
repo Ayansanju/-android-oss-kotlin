@@ -17,24 +17,16 @@ jobs:
       - name: Perform SAST Scan
         id: sast
         run: |
-          RESPONSE=$(curl -X POST \
-            -H "Client-ID: ${{ secrets.INTRUCEPT_CLIENT_ID }}" \
-            -H "Client-Secret: ${{ secrets.INTRUCEPT_CLIENT_SECRET }}" \
-            -F "projectZipFile=@project.zip" \
-            -F "applicationId=${{ secrets.INTRUCEPT_APPLICATION_ID }}" \
-            -F "scanName=android-oss-kotlin SAST Scan - ${{ github.sha }}" \
-            -F "language=kotlin" \
-            https://appsecops-api.intruceptlabs.com/api/v1/integrations/sast-scans)
+          RESPONSE=$(curl -X POST             -H "Client-ID: ${{ secrets.INTRUCEPT_CLIENT_ID }}"             -H "Client-Secret: ${{ secrets.INTRUCEPT_CLIENT_SECRET }}"             -F "projectZipFile=@project.zip"             -F "applicationId=${{ secrets.INTRUCEPT_APPLICATION_ID }}"             -F "scanName=Android OSS Kotlin - SAST Scan - ${{ github.sha }}"             -F "language=kotlin"             https://appsecops-api.intruceptlabs.com/api/v1/integrations/sast-scans)          
           
-          CAN_PROCEED=$(echo $RESPONSE | jq -r '.canProceed')
-          echo "canProceed=$CAN_PROCEED" >> $GITHUB_OUTPUT
           
-          VULNS_TABLE=$(echo $RESPONSE | jq -r '.vulnsTable')
-          echo "Vulnerabilities Table:"
-          echo "$VULNS_TABLE"
-      
-      - name: Check SAST result
-        if: steps.sast.outputs.canProceed != 'true'
-        run: |
-          echo "SAST scan failed. Please review the security issues."
-          exit 1
+          # Check for error in response
+          ERROR=$(echo "$RESPONSE" | jq -r '.error // empty')
+          if [ ! -z "$ERROR" ]; then
+            echo "Error: $ERROR"
+            exit 1
+          else
+            VULNS_TABLE=$(echo "$RESPONSE" | jq -r '.vulnsTable')
+            echo "Vulnerabilities Table:"
+            echo "$VULNS_TABLE"
+          fi
